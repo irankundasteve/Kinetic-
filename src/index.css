@@ -1,19 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Anton", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-void: #0a0a12;
-  --color-atmos: #4da6ff;
-  --color-sun: #fff9e6;
-  --color-cyan: #00f5ff;
+  --color-void: #0a0a0a;
+  --color-adamantium: #8a95a5;
+  --color-crimson: #c1121f;
+  --color-bone: #fdfbf7;
+  --color-regen: #00ff88;
 }
 
 :root {
   background-color: var(--color-void);
-  color: white;
+  color: var(--color-bone);
   overflow: hidden;
 }
 
@@ -24,18 +25,22 @@ body {
   height: 100vh;
 }
 
-canvas {
-  display: block;
+/* Kinetic FX */
+.glitch-text {
+  text-shadow: 2px 0 #ff007f, -2px 0 #00ff88;
 }
 
-.perspective-1000 {
-  perspective: 1000px;
+.distressed-mask {
+  mask-image: radial-gradient(circle, black 50%, transparent 100%);
+  mask-size: 4px 4px;
 }
 
-.text-glow-cyan {
-  text-shadow: 0 0 15px rgba(0, 245, 255, 0.5);
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
-.text-glow-sun {
-  text-shadow: 0 0 15px rgba(255, 249, 230, 0.5);
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
 }

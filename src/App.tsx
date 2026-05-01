@@ -4,65 +4,55 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sun, 
-  Moon, 
-  Eye, 
-  Camera, 
-  Sparkles, 
-  Circle,
-  Wind,
-  Maximize,
-  Minimize
-} from 'lucide-react';
+import { motion, AnimatePresence, useAnimation } from 'motion/react';
 
 // --- Constants & Config ---
-const TOTAL_FRAMES = 6600;
+const TOTAL_FRAMES = 7500; // 25 beats * 300 frames
 const FPS = 30;
 export const COLORS = {
-  VOID: '#0a0a12',
-  ATMOS: '#4da6ff',
-  SUN: '#fff9e6',
-  CYAN: '#00f5ff',
-  SKY_BLUE: '#87ceeb',
-  SKY_BRIGHT: '#e0f7ff',
-  NAVY: '#0a1a3a',
-  WHITE: '#ffffff',
-  GRAY: '#808080'
+  VOID: '#0a0a0a',
+  ADAMANTIUM: '#8a95a5',
+  CRIMSON: '#c1121f',
+  BONE: '#fdfbf7',
+  REGEN: '#00ff88',
+  GOLD: '#f4d03f',
+  DARK_BLUE: '#1e3a5f'
 };
+
+const EASE_SMOOTH_IMPACT = [0.22, 1, 0.36, 1];
+const EASE_ELASTIC_BOUNCE = [0.68, -0.55, 0.265, 1.55];
 
 // --- Types ---
 interface BeatProps {
   frame: number;
-  isActive: boolean;
 }
 
-// --- Helper Components ---
+// --- Specialized Components ---
 
-/**
- * Animated Typing Text component
- */
-const TypingText: React.FC<{
+const StaggeredText: React.FC<{
   text: string;
   startFrame: number;
   currentFrame: number;
-  speed?: number; // ms per char
+  stagger?: number; // frames per char
   className?: string;
-  glow?: boolean;
-}> = ({ text, startFrame, currentFrame, speed = 80, className = "", glow = false }) => {
-  const elapsedMs = ((currentFrame - startFrame) * 1000) / FPS;
-  const visibleChars = Math.max(0, Math.floor(elapsedMs / speed));
-  const displayedText = text.slice(0, visibleChars);
-  
+}> = ({ text, startFrame, currentFrame, stagger = 1, className = "" }) => {
+  const visibleCount = Math.max(0, (currentFrame - startFrame) / stagger);
   return (
-    <span className={`${className} ${glow ? 'text-glow-cyan' : ''}`}>
-      {displayedText}
+    <span className={className}>
+      {text.split('').map((char, i) => (
+        <span 
+          key={i} 
+          className="transition-opacity duration-300" 
+          style={{ opacity: i <= visibleCount ? 1 : 0 }}
+        >
+          {char}
+        </span>
+      ))}
     </span>
   );
 };
 
-// --- Main Application ---
+// --- App Component ---
 
 export default function App() {
   const [frame, setFrame] = useState(0);
@@ -70,750 +60,439 @@ export default function App() {
   const requestRef = useRef<number>(null);
   const startTimeRef = useRef<number>(null);
 
-  // Frame Loop
+  // Setup for Render/CI mode
   useEffect(() => {
-    // Check if we are in render mode (e.g., via query param or global flag)
     const params = new URLSearchParams(window.location.search);
-    const isRenderMode = params.get('mode') === 'render';
-
-    if (isRenderMode) {
+    if (params.get('mode') === 'render') {
       setIsPlaying(false);
-      // Expose a function to the window so Puppeteer can drive the animation
-      (window as any).setAnimationFrame = (f: number) => {
-        setFrame(f);
-      };
-      // Mark as ready
+      (window as any).setAnimationFrame = (f: number) => setFrame(f);
       (window as any).renderReady = true;
       return;
     }
 
     const animate = (time: number) => {
       if (!startTimeRef.current) startTimeRef.current = time;
-      
       if (isPlaying) {
-        // Calculate frame based on elapsed time to keep it steady @ 30fps
         const elapsed = time - startTimeRef.current;
         const newFrame = Math.floor((elapsed / 1000) * FPS);
-        
-        if (newFrame < TOTAL_FRAMES) {
-          setFrame(newFrame);
-        } else {
-          setIsPlaying(false);
-          setFrame(TOTAL_FRAMES);
-        }
+        if (newFrame < TOTAL_FRAMES) setFrame(newFrame);
+        else { setIsPlaying(false); setFrame(TOTAL_FRAMES); }
       }
-      
       requestRef.current = requestAnimationFrame(animate);
     };
-
     requestRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
+    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
   }, [isPlaying]);
 
-  const togglePlay = () => {
-    if (!isPlaying && frame >= TOTAL_FRAMES) {
-      setFrame(0);
-      startTimeRef.current = performance.now();
-    } else if (!isPlaying) {
-      // Adjust start time so it resumes from current frame
-      startTimeRef.current = performance.now() - (frame / FPS) * 1000;
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newFrame = parseInt(e.target.value);
-    setFrame(newFrame);
-    startTimeRef.current = performance.now() - (newFrame / FPS) * 1000;
-  };
-
   return (
-    <div className="relative w-screen h-screen bg-void overflow-hidden flex flex-col font-sans select-none">
-      {/* Background Layer */}
-      <BackgroundLayer frame={frame} />
-      
-      {/* Particle & VFX Layer */}
-      <VFXLayer frame={frame} />
+    <div className="relative w-screen h-screen bg-void overflow-hidden flex flex-col font-sans select-none text-bone">
+      {/* Cinematic Overlays */}
+      <div className="absolute inset-0 pointer-events-none z-50">
+        <div className="absolute inset-0 bg-void opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/60-lines.png")' }} />
+        <motion.div 
+          className="absolute inset-0 border-[20px] border-void pointer-events-none"
+          animate={{ opacity: [0.1, 0.15, 0.1] }}
+          transition={{ repeat: Infinity, duration: 4 }}
+        />
+      </div>
 
-      {/* Narrative Elements */}
-      <div className="relative z-20 flex-1 flex flex-col items-center justify-center p-8 text-center">
+      {/* Main Visual Stage */}
+      <div className="relative z-20 flex-1 flex flex-col items-center justify-center">
         <NarrativeLayer frame={frame} />
       </div>
 
       {/* Playback Controls (UI) */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-4 w-full max-w-2xl px-8 opacity-20 hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-6 w-full">
-          <button 
-            onClick={togglePlay}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-          >
-            {isPlaying ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            )}
-          </button>
-          
-          <input 
-            type="range" 
-            min="0" 
-            max={TOTAL_FRAMES} 
-            value={frame} 
-            onChange={handleSeek}
-            className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-cyan"
-          />
-          
-          <div className="text-xs font-mono text-cyan w-20 text-right">
-            {Math.floor(frame / FPS)}s / {Math.floor(TOTAL_FRAMES / FPS)}s
-          </div>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 w-full max-w-xl px-8 opacity-10 hover:opacity-100 transition-opacity">
+        <input 
+          type="range" 
+          min="0" 
+          max={TOTAL_FRAMES} 
+          value={frame} 
+          onChange={(e) => {
+            const f = parseInt(e.target.value);
+            setFrame(f);
+            startTimeRef.current = performance.now() - (f / FPS) * 1000;
+          }}
+          className="flex-1 h-1 bg-bone/20 rounded-lg appearance-none cursor-pointer accent-crimson"
+        />
+        <div className="text-[10px] font-mono text-bone opacity-50 w-24">
+          BEAT {Math.floor(frame/300) + 1} • F{frame}
         </div>
       </div>
-
-      {/* Frame Counter for Dev (Optional) */}
-      {/* <div className="absolute top-4 left-4 font-mono text-[10px] opacity-30">Frame: {frame}</div> */}
     </div>
   );
 }
 
-// --- Specialized Layers ---
-
-const BackgroundLayer: React.FC<{ frame: number }> = ({ frame }) => {
-  // Logic for background transitions
-  
-  const getBackgroundStyle = () => {
-    // 0-600: Beat 1 & 2
-    if (frame < 300) {
-      return { 
-        background: `radial-gradient(circle, #1a3a5c 0%, ${COLORS.VOID} 100%)` 
-      };
-    }
-    
-    // 300-600: Transition to Sky Blue
-    if (frame < 600) {
-      const progress = (frame - 300) / 300;
-      return {
-        background: `linear-gradient(to bottom, #1a3a5c, ${COLORS.SKY_BLUE})`,
-        opacity: 1
-      };
-    }
-
-    // 600-2100: Daytime
-    if (frame < 2100) {
-      return {
-        background: `linear-gradient(to bottom, ${COLORS.SKY_BLUE}, ${COLORS.SKY_BRIGHT})`
-      };
-    }
-
-    // 2100-2400: Night Transition
-    if (frame < 2400) {
-      const p = (frame - 2100) / 300;
-      // Sky blue to deep navy to void
-      if (p < 0.5) {
-        return { background: `linear-gradient(to bottom, #87ceeb, #0a1a3a)` };
-      }
-      return { background: `linear-gradient(to bottom, #0a1a3a, ${COLORS.VOID})` };
-    }
-
-    // 2400+: Night Space
-    return { background: COLORS.VOID };
-  };
-
-  return (
-    <div 
-      className="absolute inset-0 transition-all duration-300 pointer-events-none" 
-      style={getBackgroundStyle()}
-    >
-      {/* Stars Layer (Fade in after frame 2100) */}
-      {frame > 2100 && (
-        <div 
-          className="absolute inset-0 transition-opacity duration-1000"
-          style={{ opacity: Math.min(1, (frame - 2100) / 300) }}
-        >
-          <Stars width={window.innerWidth} height={window.innerHeight} density={frame > 4500 ? 0.001 : 0.0005} />
-        </div>
-      )}
-    </div>
-  );
-};
+// --- Narrative Logic ---
 
 const NarrativeLayer: React.FC<{ frame: number }> = ({ frame }) => {
+  const beat = Math.floor(frame / 300);
+  const beatFrame = frame % 300;
+
   return (
     <AnimatePresence mode="wait">
-      {/* Beat 1: Opening Hook */}
-      {frame >= 0 && frame < 300 && (
+      {/* Beat 01: Hook */}
+      {beat === 0 && (
         <motion.div 
           key="beat1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex flex-col gap-6"
+          exit={{ opacity: 0, scale: 0.98 }}
+          className="flex flex-col items-center gap-4 font-mono uppercase tracking-[20px]"
         >
-          <div className="text-4xl md:text-6xl font-bold tracking-tight text-white max-w-4xl">
-            <TypingText 
-              text="To understand why the sky isn't " 
-              startFrame={0} 
-              currentFrame={frame} 
-            />
-            <span className={frame > 30 ? "text-cyan text-glow-cyan transition-all duration-1000" : "text-white"}>
-              <TypingText text="blue " startFrame={130} currentFrame={frame} />
-            </span>
-            <TypingText text="at " startFrame={160} currentFrame={frame} />
-            <span className={frame > 170 ? "text-cyan text-glow-cyan transition-all duration-1000" : "text-white"}>
-              <TypingText text="night," startFrame={170} currentFrame={frame} />
-            </span>
+          <div className="text-3xl text-center">
+            <StaggeredText text="In a world where pain doesn’t last…" startFrame={0} currentFrame={frame} stagger={1.35} />
           </div>
-
-          {frame > 150 && (
+          {beatFrame > 126 && (
             <motion.div 
-              initial={{ y: 50, opacity: 0 }}
+              initial={{ y: -80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="text-xl md:text-3xl font-medium text-white/80"
+              transition={{ ease: EASE_ELASTIC_BOUNCE, duration: 1 }}
+              className="text-4xl font-bold"
             >
-              you first have to understand why it's blue during the day.
-              {frame > 290 && (
-                <motion.div 
-                  className="absolute inset-0 bg-white/20 blur-xl mix-blend-overlay"
-                  animate={{ x: [-500, 500] }}
-                  transition={{ duration: 0.5 }}
-                />
-              )}
+              two men refuse to <span className="text-crimson">die.</span>
             </motion.div>
           )}
         </motion.div>
       )}
 
-      {/* Beat 2: Core Concept */}
-      {frame >= 300 && frame < 600 && (
+      {/* Beat 02: Wolverine Weapon */}
+      {beat === 1 && (
         <motion.div 
           key="beat2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex flex-col gap-8 max-w-3xl"
+          className="relative flex flex-col items-center"
         >
-          {frame < 420 && (
-            <motion.div 
-              className="text-3xl md:text-5xl font-bold italic text-white"
-            >
-              It isn't a permanent color;
-              {frame > 350 && (
-                <motion.div 
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  className="absolute inset-0 bottom-1/2 h-[2px] bg-cyan origin-left"
-                />
-              )}
-            </motion.div>
-          )}
-
-          {frame >= 420 && frame < 510 && (
-            <motion.div 
-              initial={{ scale: 0.8, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="text-4xl md:text-6xl font-black text-cyan"
-            >
-              it's a physical reaction
-            </motion.div>
-          )}
-
-          {frame >= 510 && (
-            <motion.div className="text-3xl md:text-5xl font-bold flex flex-wrap justify-center gap-4">
-              <span>between</span>
-              <span className="text-sun text-glow-sun">sunlight</span>
-              <span>and our</span>
-              <span className="text-atmos relative">
-                atmosphere.
-                <motion.div 
-                  className="absolute inset-0 rounded-full bg-atmos/20 blur-lg"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                />
-              </span>
-            </motion.div>
-          )}
-        </motion.div>
-      )}
-
-      {/* Beat 3: Section Header – "THE DAYTIME BLUE" */}
-      {frame >= 600 && frame < 900 && (
-        <motion.div 
-          key="beat3"
-          initial={{ y: -200, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ scale: 1.5, opacity: 0 }}
-          transition={{ type: "spring", damping: 12 }}
-          className="relative"
-        >
-          <h2 className="text-6xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-atmos">
-            THE DAYTIME BLUE
-          </h2>
-          {frame < 645 && (
-            <motion.div 
-              initial={{ scale: 0, opacity: 1 }}
-              animate={{ scale: 4, opacity: 0 }}
-              className="absolute inset-0 border-4 border-atmos rounded-full"
-            />
-          )}
-        </motion.div>
-      )}
-
-      {/* Beat 4: Sun Emits White Light */}
-      {frame >= 900 && frame < 1200 && (
-        <motion.div 
-          key="beat4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="flex flex-col items-center gap-12"
-        >
-          <div className="text-4xl font-bold">
-            {frame < 1020 ? (
-              <span className={frame > 950 ? "text-white transition-all duration-300 shadow-[0_0_40px_rgba(255,255,255,0.8)]" : ""}>
-                The sun emits white light,
-              </span>
-            ) : frame < 1110 ? (
-              <div className="flex gap-2">
-                {"which is actually a mix".split(" ").map((word, i) => (
-                  <motion.span 
-                    key={i}
-                    animate={word === "mix" ? { x: [0, -10, 10, 0], color: ['#fff', '#f00', '#0f0', '#00f', '#fff'] } : {}}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {word}
-                  </motion.span>
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-1 flex-wrap justify-center">
-                <span>of all the colors of the rainbow.</span>
-              </div>
-            )}
-          </div>
-          
-          {frame > 1050 && (
-            <div className="flex gap-2">
-              {['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'].map((color, i) => (
-                <motion.div 
-                  key={color}
-                  initial={{ height: 0 }}
-                  animate={{ height: 40 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="w-4 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-          )}
-        </motion.div>
-      )}
-
-      {/* Beat 5: Light Hits Atmosphere */}
-      {frame >= 1200 && frame < 1500 && (
-        <motion.div key="beat5" className="relative flex flex-col items-center">
-          <div className="text-3xl font-bold mb-32 max-w-2xl">
-            {frame < 1320 ? "When this light hits the Earth's atmosphere," :
-             frame < 1410 ? "it crashes into gas molecules" :
-             "and scatters in every direction."}
-          </div>
-          
-          <div className="relative w-64 h-64 rounded-full bg-atmos/10 border border-atmos/30 flex items-center justify-center">
-             <motion.div 
-               className="w-full h-full rounded-full border-2 border-atmos"
-               animate={frame > 1320 ? { scale: [1, 1.2, 1], opacity: [0.5, 0] } : {}}
-               transition={{ duration: 1, repeat: 3 }}
-             />
-             {/* Molecule dots */}
-             {frame > 1350 && Array.from({ length: 15 }).map((_, i) => (
-               <motion.div 
-                 key={i}
-                 initial={{ scale: 0 }}
-                 animate={{ scale: 1 }}
-                 className="absolute w-2 h-2 bg-white rounded-full"
-                 style={{ 
-                   top: `${Math.random() * 100}%`, 
-                   left: `${Math.random() * 100}%` 
-                 }}
-               />
-             ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Beat 6: Blue Light Scatters More */}
-      {frame >= 1500 && frame < 1800 && (
-        <motion.div key="beat6" className="flex flex-col items-center gap-12 max-w-3xl">
-          <div className="text-3xl font-bold text-center">
-            {frame < 1600 ? <span className="text-atmos">Because blue light travels</span> :
-             frame < 1700 ? "in shorter, smaller waves," :
-             "it gets scattered much more strongly than other colors."}
-          </div>
-          
-          <div className="flex flex-col gap-8 w-full">
-            {/* Wave Comparison */}
-            <div className="relative h-20 w-full bg-white/5 rounded-xl flex items-center px-4">
-              <span className="text-xs font-mono w-24">RED (Long)</span>
-              <svg className="flex-1 h-full">
-                <path 
-                  d={`M 0 40 ${Array.from({ length: 20 }).map((_, i) => `Q ${i * 40 + 20} ${i % 2 === 0 ? 20 : 60}, ${i * 40 + 40} 40`).join(" ")}`}
-                  fill="none"
-                  stroke="#ff4d4d"
-                  strokeWidth="2"
-                  className="animate-[dash_10s_linear_infinite]"
-                />
-              </svg>
-            </div>
-            
-            <div className="relative h-20 w-full bg-white/5 rounded-xl flex items-center px-4">
-              <span className="text-xs font-mono w-24 text-atmos">BLUE (Short)</span>
-              <svg className="flex-1 h-full">
-                <path 
-                  d={`M 0 40 ${Array.from({ length: 60 }).map((_, i) => `Q ${i * 13 + 6} ${i % 2 === 0 ? 30 : 50}, ${i * 13 + 13} 40`).join(" ")}`}
-                  fill="none"
-                  stroke={COLORS.ATMOS}
-                  strokeWidth="2"
-                  className="animate-[dash_2s_linear_infinite]"
-                />
-              </svg>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Beat 7: Seeing Scattered Blue */}
-      {frame >= 1800 && frame < 2100 && (
-        <motion.div key="beat7" className="relative flex flex-col items-center">
-          <div className="text-3xl italic max-w-xl mb-12">
-            "During the day, no matter which direction you look..."
-          </div>
-          <div className="relative w-48 h-48 flex items-center justify-center">
-             <Eye size={80} className="text-white z-10" />
-             {Array.from({ length: 12 }).map((_, i) => (
-               <motion.div 
-                 key={i}
-                 className="absolute inset-0 flex items-center justify-center"
-                 animate={{ rotate: i * 30 + (frame - 1800) }}
-               >
-                 <div className="w-1 h-64 bg-gradient-to-t from-atmos/0 via-atmos to-atmos/0 opacity-30" />
-               </motion.div>
-             ))}
-          </div>
-          <div className="mt-12 text-2xl font-bold text-atmos text-glow-cyan">
-             you are seeing this scattered blue light hitting your eyes from every angle.
-          </div>
-        </motion.div>
-      )}
-
-      {/* Beat 8: Section Header – "THE NIGHTTIME SHADOW" */}
-      {frame >= 2100 && frame < 2400 && (
-        <motion.div 
-          key="beat8"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          className="relative text-center"
-        >
-          <h2 className="text-6xl md:text-9xl font-black tracking-tighter text-white/90">
-            THE NIGHTTIME SHADOW
-          </h2>
-          {frame > 2250 && (
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: '-100%' }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-              className="absolute inset-0 bg-black mix-blend-multiply h-[200%] -top-1/2"
-            />
-          )}
-        </motion.div>
-      )}
-
-      {/* Beat 9-11: Night Logic */}
-      {frame >= 2400 && frame < 3300 && (
-        <motion.div key="beat9" className="flex flex-col items-center gap-12">
-            <div className="text-4xl font-bold max-w-2xl px-4">
-              {frame < 2700 ? "The simple reason there is no blue sky at night is that the source of light is gone." :
-               frame < 3000 ? "As the Earth rotates, your location moves into the planet's own shadow." :
-               "Without direct sunlight hitting the atmosphere above you, there is no light to be scattered."}
-            </div>
-            
-            <div className="relative w-80 h-80">
-               {/* Earth Silhouette with Shadow */}
-               <div className="absolute inset-0 rounded-full bg-black overflow-hidden border border-white/5">
-                 {/* Landmass silhouettes rotating */}
-                 <motion.div 
-                   className="absolute inset-0 flex opacity-20"
-                   animate={{ x: [0, -320] }}
-                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                 >
-                   <GlobeLandmasses />
-                   <GlobeLandmasses />
-                 </motion.div>
-                 
-                 {/* The Shadow (Terminator) */}
-                 <motion.div 
-                   className="absolute inset-0 bg-gradient-to-r from-transparent via-black/80 to-black"
-                   initial={{ x: '100%' }}
-                   animate={frame > 2700 ? { x: '40%' } : { x: '100%' }}
-                   transition={{ duration: 2, ease: "easeInOut" }}
-                 />
-
-                 {/* Viewer Location Dot (Beat 10) */}
-                 {frame >= 2700 && frame < 3000 && (
-                   <motion.div 
-                     className="absolute w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_#ef4444]"
-                     animate={{ x: [100, 220], y: [160, 160] }}
-                     transition={{ duration: 4, ease: "linear" }}
-                   />
-                 )}
-               </div>
-               
-               {/* Atmospheric Glow (Dimming) */}
-               <motion.div 
-                 className="absolute inset-[-4px] rounded-full border-2 border-atmos/30 blur-sm"
-                 animate={{ opacity: frame > 2800 ? 0 : 1 }}
-               />
-            </div>
-        </motion.div>
-      )}
-
-      {/* Beat 12-16: Vacuum of Space */}
-      {frame >= 3300 && frame < 4800 && (
-        <motion.div key="beat12" className="flex flex-col items-center gap-8 w-full max-w-5xl">
-           <div className="text-4xl md:text-5xl font-black tracking-widest text-white/10 uppercase mb-8">
-             {frame < 3600 ? "Looking Into The Void" : 
-              frame < 4200 ? "Atmosphere becomes transparent" :
-              "True color of the universe"}
-           </div>
-           
-           <div className="relative h-64 w-full flex items-center justify-center">
-             <AnimatePresence mode="wait">
-               {/* Beat 14: Shattering Ceiling */}
-               {frame >= 3900 && frame < 4100 && (
-                 <motion.div 
-                   key="shatter"
-                   className="absolute inset-0 flex items-center justify-center"
-                 >
-                   {frame < 3980 ? (
-                     <motion.div 
-                       className="w-96 h-32 bg-atmos/20 border border-atmos/40 rounded-lg backdrop-blur-sm flex items-center justify-center text-xs font-mono uppercase tracking-widest opacity-50"
-                       exit={{ 
-                         scale: 1.2, 
-                         opacity: 0,
-                         filter: "blur(20px)"
-                       }}
-                     >
-                       Ceiling of blue light
-                     </motion.div>
-                   ) : (
-                     <div className="relative w-96 h-32">
-                        {Array.from({ length: 12 }).map((_, i) => (
-                          <motion.div 
-                            key={i}
-                            className="absolute bg-atmos/30 border border-atmos/50"
-                            initial={{ 
-                              width: 30 + Math.random() * 40, 
-                              height: 20 + Math.random() * 30,
-                              top: Math.random() * 80,
-                              left: Math.random() * 80,
-                            }}
-                            animate={{ 
-                              x: (Math.random() - 0.5) * 400,
-                              y: (Math.random() - 0.5) * 400,
-                              rotate: Math.random() * 360,
-                              opacity: 0,
-                              scale: 0.5
-                            }}
-                            transition={{ duration: 1.5, ease: "easeOut" }}
-                          />
-                        ))}
-                     </div>
-                   )}
-                 </motion.div>
-               )}
-               
-               {/* Beat 15: Empty Space text spacing */}
-               {frame >= 4200 && frame < 4500 && (
-                 <motion.div 
-                   key="empty"
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: 1 }}
-                   className="flex flex-col items-center gap-12"
-                 >
-                   <span className="text-5xl md:text-7xl font-bold tracking-[1.5em] text-white/80 transition-all duration-1000">
-                     EMPTY
-                   </span>
-                   <p className="text-xl font-light opacity-40 max-w-md">There aren't enough molecules to scatter light back at you.</p>
-                 </motion.div>
-               )}
-             </AnimatePresence>
-
-             {frame >= 4500 && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center"
-                >
-                  <p className="text-3xl md:text-5xl font-light italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-white to-blue-400 animate-gradient-x">
-                    The true color of the universe
-                  </p>
-                </motion.div>
-             )}
-           </div>
-        </motion.div>
-      )}
-
-      {/* Beat 17-21: Moonlight */}
-      {frame >= 4800 && frame < 6300 && (
-        <motion.div key="beat17" className="flex flex-col items-center gap-8">
-           <div className="flex items-center gap-4 text-4xl font-bold text-white/80">
-              <Moon size={40} className="text-sun/50" />
-              <span>THE LIMIT OF MOONLIGHT</span>
-           </div>
-           
-           <div className="text-2xl max-w-2xl opacity-70">
-              {frame < 5400 ? "But wait—doesn't the Moon reflect sunlight? Why doesn't it turn the sky blue?" :
-               frame < 5700 ? "While the Moon does reflect sunlight, it is hundreds of thousands of times dimmer than the Sun." :
-               frame < 6000 ? "There simply isn't enough energy in moonlight to scatter enough blue light for our eyes to perceive it." :
-               "To a high-powered camera, it might look navy, but to the human eye, it remains black."}
-           </div>
-           
-           <AnimatePresence>
-             {frame > 5520 && frame < 5700 && (
-               <motion.div 
-                 initial={{ opacity: 0 }} 
-                 animate={{ opacity: 1 }} 
-                 exit={{ opacity: 0 }}
-                 className="w-full max-w-md bg-white/5 p-6 rounded-2xl border border-white/10"
-               >
-                 <div className="flex justify-between items-end gap-4 h-40">
-                    <div className="flex-1 flex flex-col items-center gap-2">
-                       <div className="w-full bg-sun rounded-t h-full shadow-[0_0_20px_#fff9e6]" />
-                       <span className="text-[10px] font-mono">SUN</span>
-                    </div>
-                    <div className="flex-1 flex flex-col items-center gap-2">
-                       <motion.div 
-                          className="w-full bg-sun/20 rounded-t" 
-                          animate={{ height: ['0.1%', '0.5%', '0.1%'] }} 
-                          transition={{ repeat: Infinity }}
-                        />
-                       <span className="text-[10px] font-mono opacity-50">MOON</span>
-                    </div>
-                 </div>
-               </motion.div>
-             )}
-           </AnimatePresence>
-        </motion.div>
-      )}
-
-      {/* Beat 22: Closing */}
-      {frame >= 6300 && (
-        <motion.div 
-          key="beat22"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-12"
-        >
-          <div className="text-4xl font-bold">
-            Essentially, the sky doesn't turn black at night—
-          </div>
-          <motion.div 
-            className="text-6xl md:text-8xl font-black text-cyan"
-            animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-            transition={{ repeat: Infinity, duration: 4 }}
+          <motion.h1 
+            initial={{ y: -120, scale: 1.12 }}
+            animate={{ y: 0, scale: 1 }}
+            transition={{ ease: "circOut", duration: 0.8 }}
+            className="text-[120px] font-sans font-black tracking-tighter text-adamantium leading-none"
           >
-            it just stops glowing blue.
-          </motion.div>
-          
+            ONE IS A WEAPON
+          </motion.h1>
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 3 }}
-            className="text-white/20 font-mono tracking-widest text-sm"
+            transition={{ delay: 0.8 }}
+            className="text-4xl font-sans tracking-widest mt-4 opacity-40 uppercase"
           >
-            WHY NIGHT HAS NO BLUE • COSMIC MINIMALISM
+            FORGED BY WAR…
           </motion.div>
+        </motion.div>
+      )}
+
+      {/* Beat 03: Deadpool Intro */}
+      {beat === 2 && (
+        <motion.div 
+          key="beat3"
+          className="flex flex-col items-start gap-2 max-w-4xl"
+        >
+          <motion.div 
+            initial={{ rotate: -4, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            className="text-5xl font-mono"
+          >
+            The other?
+          </motion.div>
+          {beatFrame > 36 && (
+            <div className="text-7xl font-sans font-black text-white/90 leading-tight">
+              A WEAPON WHO WON’T STOP <span className="text-crimson/80 animate-pulse italic">TALKING.</span>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Beat 04: WOLVERINE VS DEADPOOL */}
+      {beat === 3 && (
+        <motion.div 
+          key="beat4"
+          className="flex items-center gap-8 font-sans font-black text-[110px]"
+        >
+          <motion.div 
+            initial={{ x: -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ ease: EASE_SMOOTH_IMPACT, duration: 0.6 }}
+            className="text-adamantium"
+          >
+            WOLVERINE
+          </motion.div>
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: [0, 1.3, 1] }}
+            className="text-3xl text-gold mx-4"
+          >
+            VS
+          </motion.div>
+          <motion.div 
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ ease: EASE_SMOOTH_IMPACT, duration: 0.6 }}
+            className="text-crimson"
+          >
+            DEADPOOL
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Beat 05-06: Focus Frames */}
+      {(beat === 4 || beat === 5) && (
+        <motion.div 
+          key={`beat${beat}`}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <div className={`text-[120px] font-black uppercase ${beat === 4 ? 'text-adamantium' : 'text-crimson'}`}>
+            {beat === 4 ? 'WOLVERINE.' : 'DEADPOOL.'}
+          </div>
+          <div className="text-2xl font-mono tracking-widest opacity-60">
+            {beat === 4 ? 'ADAMANTIUM CLAWS. ANIMAL INSTINCT.' : 'REGENERATING CHAOS IN A RED SUIT.'}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Beat 07: Both Heal */}
+      {beat === 6 && (
+        <div className="flex flex-col items-center gap-16 w-full">
+           <motion.div 
+             initial={{ x: -100, opacity: 0 }}
+             animate={{ x: 0, opacity: 1 }}
+             className="text-8xl font-black text-regen text-glow"
+           >
+             BOTH HEAL.
+           </motion.div>
+           <motion.div className="w-full h-[2px] bg-white/10" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} />
+           <motion.div 
+             initial={{ x: 100, opacity: 0 }}
+             animate={{ x: 0, opacity: 1 }}
+             transition={{ delay: 0.5 }}
+             className="text-8xl font-black text-crimson"
+           >
+             BOTH KILL.
+           </motion.div>
+        </div>
+      )}
+
+      {/* Beat 08: Logic Comparison */}
+      {beat === 7 && (
+        <div className="flex flex-col md:flex-row items-center justify-center gap-20 w-full px-20">
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-4xl font-mono text-dark_blue max-w-md"
+          >
+            Wolverine fights with precision—
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, x: 50, rotate: 6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-6xl font-black text-crimson max-w-md"
+          >
+            Deadpool fights like the rules don’t exist.
+          </motion.div>
+        </div>
+      )}
+
+      {/* Beat 09: Minimalist Pause */}
+      {beat === 8 && (
+        <motion.div 
+          key="beat9"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center gap-8 font-mono text-6xl"
+        >
+          <div>And maybe…</div>
+          {beatFrame > 60 && (
+            <motion.div 
+              initial={{ scaleY: 0.3, opacity: 0 }}
+              animate={{ scaleY: 1, opacity: 1 }}
+              className="text-8xl font-black text-crimson"
+            >
+              THEY DON’T.
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Beat 10: Combat Stagger */}
+      {beat === 9 && (
+        <div className="relative flex flex-col gap-12 text-7xl font-black tracking-tighter">
+          <motion.div initial={{ x: -200, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="text-bone">STEEL CLASHES.</motion.div>
+          <motion.div initial={{ x: 200, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="text-adamantium">BULLETS FLY.</motion.div>
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.7, ease: EASE_ELASTIC_BOUNCE }} className="text-crimson">CLAWS MEET KATANAS.</motion.div>
+        </div>
+      )}
+
+      {/* Beat 11: Wolverine Charge */}
+      {beat === 10 && (
+        <motion.div 
+          initial={{ x: -400, scale: 0.8 }}
+          animate={{ x: 0, scale: 1.5 }}
+          transition={{ ease: EASE_SMOOTH_IMPACT, duration: 2 }}
+          className="text-[140px] font-black text-adamantium italic -skew-x-12"
+        >
+          WOLVERINE CHARGES
+        </motion.div>
+      )}
+
+      {/* Beat 12: Deadpool Dodge */}
+      {beat === 11 && (
+        <motion.div 
+          animate={{ x: [0, 200, -200, 100, -50, 0], y: [0, -100, 150, -50, 100, 0] }}
+          transition={{ duration: 3, ease: "easeInOut" }}
+          className="text-6xl font-mono text-crimson flex flex-col items-center"
+        >
+          <span className="text-9xl font-black">DEADPOOL DODGES</span>
+          <span className="opacity-50 tracking-[1em]">LAUGHING</span>
+        </motion.div>
+      )}
+
+      {/* Beat 13: Fracture & Heal */}
+      {beat === 12 && (
+        <div className="flex flex-col items-center gap-10">
+          <motion.div 
+            animate={{ letterSpacing: beatFrame < 45 ? "0px" : "40px", opacity: beatFrame < 45 ? 1 : 0.5 }}
+            className="text-8xl font-black text-bone"
+          >
+            BONES BREAK.
+          </motion.div>
+          {beatFrame > 60 && (
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.2, 1] }}
+              className="text-9xl font-black text-regen text-glow"
+            >
+              THEY’RE BACK.
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* Beat 14: Again and Again */}
+      {beat === 13 && (
+        <div className="flex flex-col gap-4 text-8xl font-black">
+          <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>AGAIN.</motion.div>
+          {beatFrame > 40 && <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.2 }}>AND AGAIN.</motion.div>}
+          {beatFrame > 80 && <motion.div initial={{ y: -100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.1 }} className="text-crimson">AND AGAIN.</motion.div>}
+        </div>
+      )}
+
+      {/* Beat 15: The Problem */}
+      {beat === 14 && (
+        <motion.div 
+          initial={{ opacity: 0, tracking: "40px" }}
+          animate={{ opacity: 1, tracking: "10px" }}
+          className="text-6xl font-mono"
+        >
+          HERE’S THE PROBLEM.
+        </motion.div>
+      )}
+
+      {/* Beat 16: Relentless */}
+      {beat === 15 && (
+        <div className="flex flex-col items-center gap-20">
+          <div className="text-5xl font-mono">You can’t outlast someone…</div>
+          <motion.div 
+            animate={{ y: [0, -10, 0] }}
+            transition={{ repeat: Infinity, duration: 0.5 }}
+            className="text-8xl font-black text-crimson underline decoration-8 underline-offset-12"
+          >
+            WHO REFUSES TO STAY DOWN.
+          </motion.div>
+        </div>
+      )}
+
+      {/* Beat 17: Rage vs Insanity */}
+      {beat === 16 && (
+        <div className="flex gap-40 text-7xl font-black uppercase">
+          <motion.div animate={{ skewY: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="text-dark_blue">RAGE FUELS</motion.div>
+          <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="text-crimson">INSANITY FREES</motion.div>
+        </div>
+      )}
+
+      {/* Beat 18: One Fights / One Enjoys */}
+      {beat === 17 && (
+        <div className="flex flex-col items-center gap-8">
+           <motion.div initial={{ x: -200 }} animate={{ x: 0 }} className="text-6xl font-sans font-black">ONE FIGHTS TO END IT.</motion.div>
+           <div className="text-bone/20">•</div>
+           <motion.div 
+              animate={{ x: [0, -10, 10, -5, 5, 0] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="text-6xl font-mono text-gold"
+            >
+              JUST ENJOYS THE CHAOS.
+            </motion.div>
+        </div>
+      )}
+
+      {/* Beat 19: Who Wins? */}
+      {beat === 18 && (
+        <motion.div 
+          animate={{ color: [COLORS.ADAMANTIUM, COLORS.CRIMSON, COLORS.GOLD, COLORS.ADAMANTIUM] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="text-[160px] font-black"
+        >
+          SO WHO WINS?
+        </motion.div>
+      )}
+
+      {/* Beat 20-21: Summarized Stats */}
+      {beat === 19 && (
+        <div className="flex flex-col gap-12 text-7xl font-sans font-black px-20">
+          <div className="text-adamantium flex items-baseline gap-4">STRENGTH? <span className="text-3xl font-mono text-bone/40">WOLVERINE</span></div>
+          <div className="text-crimson flex items-baseline gap-4">CHAOS? <span className="text-3xl font-mono text-bone/40">DEADPOOL</span></div>
+        </div>
+      )}
+
+      {/* Beat 22: No Winner */}
+      {beat === 21 && (
+        <motion.div 
+          initial={{ scale: 2, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-[120px] font-black tracking-widest flex flex-col items-center"
+        >
+          <span>THERE IS NO</span>
+          <span className="text-crimson glitch-text">WINNER.</span>
+        </motion.div>
+      )}
+
+      {/* Beat 23: Never Ends */}
+      {beat === 22 && (
+        <div className="flex flex-col items-center gap-12">
+          <div className="text-4xl font-mono">Because when two immortals fight…</div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-8xl font-black text-crimson"
+          >
+            THE BATTLE NEVER ENDS.
+          </motion.div>
+        </div>
+      )}
+
+      {/* Beat 24: Blend */}
+      {beat === 23 && (
+        <div className="relative w-full h-[400px] flex items-center justify-center">
+           <motion.div initial={{ x: -200 }} animate={{ x: 100 }} className="text-7xl font-black text-adamantium mix-blend-screen">DIFFERENT CODES</motion.div>
+           <motion.div initial={{ x: 200 }} animate={{ x: -100 }} className="text-7xl font-black text-crimson mix-blend-screen">SAME CURSE</motion.div>
+        </div>
+      )}
+
+      {/* Beat 25: Closing */}
+      {beat === 24 && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 10 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="text-9xl font-black text-crimson">IMMORTAL CLASH</div>
+          <div className="text-xl font-mono tracking-[2em] opacity-30 mt-8">A KINETIC TYPOGRAPHY BLUEPRINT</div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
-
-// --- Sub-components (Visual Assets) ---
-
-const Stars: React.FC<{ width: number, height: number, density?: number }> = ({ width, height, density = 0.0005 }) => {
-  const count = Math.floor(width * height * density);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, width, height);
-    for (let i = 0; i < count; i++) {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
-      const size = Math.random() * 2;
-      const opacity = Math.random();
-      ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }, [width, height, count]);
-
-  return <canvas ref={canvasRef} width={width} height={height} className="absolute inset-0" />;
-};
-
-const VFXLayer: React.FC<{ frame: number }> = ({ frame }) => {
-  // Logic for particle systems
-  return (
-    <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-       {/* Global Dust Particles */}
-       {frame < 2100 && (
-         <div className="absolute inset-0 opacity-20">
-            {Array.from({ length: 40 }).map((_, i) => (
-              <motion.div 
-                key={i}
-                className="absolute w-1 h-1 bg-white rounded-full"
-                animate={{ 
-                  y: [-20, window.innerHeight + 20],
-                  x: (Math.random() - 0.5) * 50
-                }}
-                transition={{ 
-                  duration: 5 + Math.random() * 10, 
-                  repeat: Infinity,
-                  delay: Math.random() * 10
-                }}
-                style={{ 
-                  left: `${Math.random() * 100}%`,
-                  top: '-20px'
-                }}
-              />
-            ))}
-         </div>
-       )}
-
-       {/* Scattering Burst Beat 3 */}
-       {frame > 615 && frame < 660 && (
-         <motion.div 
-           initial={{ scale: 0, opacity: 1 }}
-           animate={{ scale: 3, opacity: 0 }}
-           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-atmos/30 blur-3xl"
-         />
-       )}
-    </div>
-  );
-};
-
-// Simple rendering of globe landmasses for the silhouette
-const GlobeLandmasses = () => (
-  <div className="flex gap-4 w-[320px] h-full items-center p-4">
-    <div className="w-20 h-32 bg-white rounded-[40%] rotate-12" />
-    <div className="w-32 h-20 bg-white rounded-[30%] -rotate-6 mt-12" />
-    <div className="w-12 h-12 bg-white rounded-full mt-4" />
-  </div>
-);
