@@ -532,43 +532,133 @@ const NarrativeLayer: React.FC<{ frame: number }> = ({ frame }) => {
       {/* Beat 9-11: Night Logic */}
       {frame >= 2400 && frame < 3300 && (
         <motion.div key="beat9" className="flex flex-col items-center gap-12">
-            <div className="text-4xl font-bold max-w-2xl">
+            <div className="text-4xl font-bold max-w-2xl px-4">
               {frame < 2700 ? "The simple reason there is no blue sky at night is that the source of light is gone." :
                frame < 3000 ? "As the Earth rotates, your location moves into the planet's own shadow." :
                "Without direct sunlight hitting the atmosphere above you, there is no light to be scattered."}
             </div>
             
-            <div className="relative w-64 h-64 overflow-hidden rounded-full border border-white/10 bg-black">
+            <div className="relative w-80 h-80">
+               {/* Earth Silhouette with Shadow */}
+               <div className="absolute inset-0 rounded-full bg-black overflow-hidden border border-white/5">
+                 {/* Landmass silhouettes rotating */}
+                 <motion.div 
+                   className="absolute inset-0 flex opacity-20"
+                   animate={{ x: [0, -320] }}
+                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                 >
+                   <GlobeLandmasses />
+                   <GlobeLandmasses />
+                 </motion.div>
+                 
+                 {/* The Shadow (Terminator) */}
+                 <motion.div 
+                   className="absolute inset-0 bg-gradient-to-r from-transparent via-black/80 to-black"
+                   initial={{ x: '100%' }}
+                   animate={frame > 2700 ? { x: '40%' } : { x: '100%' }}
+                   transition={{ duration: 2, ease: "easeInOut" }}
+                 />
+
+                 {/* Viewer Location Dot (Beat 10) */}
+                 {frame >= 2700 && frame < 3000 && (
+                   <motion.div 
+                     className="absolute w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_#ef4444]"
+                     animate={{ x: [100, 220], y: [160, 160] }}
+                     transition={{ duration: 4, ease: "linear" }}
+                   />
+                 )}
+               </div>
+               
+               {/* Atmospheric Glow (Dimming) */}
                <motion.div 
-                 className="absolute inset-0 bg-gradient-to-r from-sun/20 via-transparent to-black"
-                 animate={{ x: frame < 2700 ? 0 : -300 }}
-                 transition={{ duration: 2 }}
+                 className="absolute inset-[-4px] rounded-full border-2 border-atmos/30 blur-sm"
+                 animate={{ opacity: frame > 2800 ? 0 : 1 }}
                />
-               <GlobeIcon className="absolute inset-0 p-4 opacity-40 animate-spin-slow" />
             </div>
         </motion.div>
       )}
 
       {/* Beat 12-16: Vacuum of Space */}
       {frame >= 3300 && frame < 4800 && (
-        <motion.div key="beat12" className="flex flex-col items-center gap-8">
-           <div className="text-5xl font-black tracking-widest text-white/20 uppercase">
+        <motion.div key="beat12" className="flex flex-col items-center gap-8 w-full max-w-5xl">
+           <div className="text-4xl md:text-5xl font-black tracking-widest text-white/10 uppercase mb-8">
              {frame < 3600 ? "Looking Into The Void" : 
               frame < 4200 ? "Atmosphere becomes transparent" :
               "True color of the universe"}
            </div>
            
-           <div className="text-2xl md:text-3xl max-w-3xl font-light leading-relaxed">
-             {frame >= 3900 && frame < 4200 && (
-               <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                 Instead of seeing a ceiling of blue light, you are looking through the thin layer of our air...
-               </motion.span>
-             )}
-             {frame >= 4200 && frame < 4500 && (
-               <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-4">
-                 <span className="text-4xl tracking-[1em]">Space is black</span>
-                 <span className="opacity-50">because it is mostly empty.</span>
-               </motion.span>
+           <div className="relative h-64 w-full flex items-center justify-center">
+             <AnimatePresence mode="wait">
+               {/* Beat 14: Shattering Ceiling */}
+               {frame >= 3900 && frame < 4100 && (
+                 <motion.div 
+                   key="shatter"
+                   className="absolute inset-0 flex items-center justify-center"
+                 >
+                   {frame < 3980 ? (
+                     <motion.div 
+                       className="w-96 h-32 bg-atmos/20 border border-atmos/40 rounded-lg backdrop-blur-sm flex items-center justify-center text-xs font-mono uppercase tracking-widest opacity-50"
+                       exit={{ 
+                         scale: 1.2, 
+                         opacity: 0,
+                         filter: "blur(20px)"
+                       }}
+                     >
+                       Ceiling of blue light
+                     </motion.div>
+                   ) : (
+                     <div className="relative w-96 h-32">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <motion.div 
+                            key={i}
+                            className="absolute bg-atmos/30 border border-atmos/50"
+                            initial={{ 
+                              width: 30 + Math.random() * 40, 
+                              height: 20 + Math.random() * 30,
+                              top: Math.random() * 80,
+                              left: Math.random() * 80,
+                            }}
+                            animate={{ 
+                              x: (Math.random() - 0.5) * 400,
+                              y: (Math.random() - 0.5) * 400,
+                              rotate: Math.random() * 360,
+                              opacity: 0,
+                              scale: 0.5
+                            }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                          />
+                        ))}
+                     </div>
+                   )}
+                 </motion.div>
+               )}
+               
+               {/* Beat 15: Empty Space text spacing */}
+               {frame >= 4200 && frame < 4500 && (
+                 <motion.div 
+                   key="empty"
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   className="flex flex-col items-center gap-12"
+                 >
+                   <span className="text-5xl md:text-7xl font-bold tracking-[1.5em] text-white/80 transition-all duration-1000">
+                     EMPTY
+                   </span>
+                   <p className="text-xl font-light opacity-40 max-w-md">There aren't enough molecules to scatter light back at you.</p>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+
+             {frame >= 4500 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center"
+                >
+                  <p className="text-3xl md:text-5xl font-light italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-white to-blue-400 animate-gradient-x">
+                    The true color of the universe
+                  </p>
+                </motion.div>
              )}
            </div>
         </motion.div>
@@ -719,15 +809,11 @@ const VFXLayer: React.FC<{ frame: number }> = ({ frame }) => {
   );
 };
 
-// Simple Globe Icon representation
-const GlobeIcon = ({ className }: { className?: string }) => (
-  <div className={className}>
-    <div className="w-full h-full rounded-full border-2 border-white/20 relative">
-      <div className="absolute inset-0 flex flex-col gap-4 opacity-20 py-8">
-        <div className="h-4 bg-white rounded-full mx-4" />
-        <div className="h-4 bg-white rounded-full mx-2" />
-        <div className="h-4 bg-white rounded-full mx-6" />
-      </div>
-    </div>
+// Simple rendering of globe landmasses for the silhouette
+const GlobeLandmasses = () => (
+  <div className="flex gap-4 w-[320px] h-full items-center p-4">
+    <div className="w-20 h-32 bg-white rounded-[40%] rotate-12" />
+    <div className="w-32 h-20 bg-white rounded-[30%] -rotate-6 mt-12" />
+    <div className="w-12 h-12 bg-white rounded-full mt-4" />
   </div>
 );
