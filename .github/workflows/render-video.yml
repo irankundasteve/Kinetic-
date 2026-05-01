@@ -8,20 +8,24 @@ on:
 jobs:
   render:
     runs-on: ubuntu-latest
+    timeout-minutes: 360 # 6 hours max
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20 # Use a more recent node versions for better performance
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci # Use ci for more reliable builds
 
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Build App
+        run: npm run build
 
       - name: Start Dev Server
         run: |

@@ -6,58 +6,64 @@ import ffmpegPath from 'ffmpeg-static';
 
 const TOTAL_FRAMES = 6600;
 const FPS = 30;
-const WIDTH = 1920; // 1080p for faster rendering in CI, can be 3840 for 4K
+const WIDTH = 1920; 
 const HEIGHT = 1080;
 const OUTPUT_DIR = path.join(process.cwd(), 'render_frames');
 const VIDEO_PATH = path.join(process.cwd(), 'why_night_has_no_blue.mp4');
+const CONCURRENCY = 2; // GitHub runners have 2 cores, 2 workers is optimal
 
-async function render() {
-  console.log('🚀 Starting video render...');
-
-  // Ensure output dir is empty
-  await fs.emptyDir(OUTPUT_DIR);
-
+async function renderWorker(workerId: number, startFrame: number, endFrame: number, appUrl: string) {
+  console.log(`[Worker ${workerId}] Starting frames ${startFrame} to ${endFrame}...`);
+  
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     defaultViewport: { width: WIDTH, height: HEIGHT }
   });
 
   const page = await browser.newPage();
-  
-  // Navigate to the app in render mode
-  // Assuming the dev server is running on port 3000
-  await page.goto('http://localhost:3000?mode=render', { waitUntil: 'networkidle0' });
-
-  // Wait for the app to signal it's ready
+  await page.goto(appUrl, { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => (window as any).renderReady === true);
 
-  console.log(`📸 Capturing ${TOTAL_FRAMES} frames...`);
-
-  for (let i = 0; i < TOTAL_FRAMES; i++) {
-    // Progress update every 100 frames
-    if (i % 100 === 0) {
-      console.log(`Frame ${i}/${TOTAL_FRAMES} (${Math.round((i/TOTAL_FRAMES) * 100)}%)`);
+  for (let i = startFrame; i <= endFrame; i++) {
+    if (i % 50 === 0) {
+      console.log(`[Worker ${workerId}] Frame ${i}/${endFrame}`);
     }
 
-    // Set the specific frame and wait for paint
     await page.evaluate(async (f) => {
       (window as any).setAnimationFrame(f);
-      // Wait for two frames to ensure React state update and browser paint
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
     }, i);
 
-    // Save screenshot as JPEG (much faster than PNG for large quantities)
     await page.screenshot({
       path: path.join(OUTPUT_DIR, `frame_${i.toString().padStart(5, '0')}.jpg`),
       type: 'jpeg',
-      quality: 95
+      quality: 90
     });
   }
 
   await browser.close();
+  console.log(`[Worker ${workerId}] Finished.`);
+}
+
+async function render() {
+  console.log('🚀 Starting Parallel Video Render...');
+  await fs.ensureDir(OUTPUT_DIR);
+
+  const appUrl = 'http://localhost:3000?mode=render';
+  const framesPerWorker = Math.ceil(TOTAL_FRAMES / CONCURRENCY);
+  const workers = [];
+
+  for (let i = 0; i < CONCURRENCY; i++) {
+    const start = i * framesPerWorker;
+    const end = Math.min(start + framesPerWorker - 1, TOTAL_FRAMES - 1);
+    workers.push(renderWorker(i, start, end, appUrl));
+  }
+
+  await Promise.all(workers);
 
   console.log('🎞️ Encoding video with FFmpeg...');
+  // ... rest of the encoding logic
   
   if (!ffmpegPath) {
      throw new Error('FFmpeg not found');
