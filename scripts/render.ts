@@ -39,18 +39,19 @@ async function render() {
       console.log(`Frame ${i}/${TOTAL_FRAMES} (${Math.round((i/TOTAL_FRAMES) * 100)}%)`);
     }
 
-    // Set the specific frame
-    await page.evaluate((f) => {
+    // Set the specific frame and wait for paint
+    await page.evaluate(async (f) => {
       (window as any).setAnimationFrame(f);
+      // Wait for two frames to ensure React state update and browser paint
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
     }, i);
 
-    // Give a tiny bit of time for React to update and layout to settle
-    await new Promise(r => setTimeout(r, 20));
-
-    // Save screenshot
+    // Save screenshot as JPEG (much faster than PNG for large quantities)
     await page.screenshot({
-      path: path.join(OUTPUT_DIR, `frame_${i.toString().padStart(5, '0')}.png`),
-      type: 'png'
+      path: path.join(OUTPUT_DIR, `frame_${i.toString().padStart(5, '0')}.jpg`),
+      type: 'jpeg',
+      quality: 95
     });
   }
 
@@ -65,10 +66,11 @@ async function render() {
   const ffmpeg = spawn(ffmpegPath, [
     '-y',
     '-framerate', FPS.toString(),
-    '-i', path.join(OUTPUT_DIR, 'frame_%05d.png'),
+    '-i', path.join(OUTPUT_DIR, 'frame_%05d.jpg'),
     '-c:v', 'libx264',
+    '-preset', 'slower', // Use slower preset for better compression since we are already waiting
     '-pix_fmt', 'yuv420p',
-    '-crf', '18', // High quality
+    '-crf', '18',
     VIDEO_PATH
   ]);
 
