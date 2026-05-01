@@ -40,5 +40,5 @@ jobs:
       - name: Upload Video Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: why-night-has-no-blue-video
-          path: why_night_has_no_blue.mp4
+          name: immortal-clash-video
+          path: immortal_clash.mp4

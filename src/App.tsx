@@ -447,6 +447,18 @@ const NarrativeLayer: React.FC<{ frame: number }> = ({ frame }) => {
         </div>
       )}
 
+      {/* Beat 21: In Truth? */}
+      {beat === 20 && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-7xl font-mono uppercase tracking-widest flex items-center"
+        >
+          <StaggeredText text="But in truth?" startFrame={0} currentFrame={beatFrame} stagger={3} />
+          {beatFrame % 12 < 6 && <span className="w-4 h-16 bg-bone ml-4" />}
+        </motion.div>
+      )}
+
       {/* Beat 22: No Winner */}
       {beat === 21 && (
         <motion.div 

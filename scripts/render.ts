@@ -9,7 +9,7 @@ const FPS = 30;
 const WIDTH = 1920; 
 const HEIGHT = 1080;
 const OUTPUT_DIR = path.join(process.cwd(), 'render_frames');
-const VIDEO_PATH = path.join(process.cwd(), 'why_night_has_no_blue.mp4');
+const VIDEO_PATH = path.join(process.cwd(), 'immortal_clash.mp4');
 const CONCURRENCY = 2; // GitHub runners have 2 cores, 2 workers is optimal
 
 async function renderWorker(workerId: number, startFrame: number, endFrame: number, appUrl: string) {
