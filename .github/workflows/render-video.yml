@@ -1,0 +1,40 @@
+name: Render Video
+
+on:
+  workflow_dispatch: # Allow manual trigger
+  push:
+    branches: [ main ] # Or your primary branch
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Start Dev Server
+        run: |
+          npm run dev &
+          npx wait-on http://localhost:3000
+
+      - name: Run Rendering Script
+        run: npx tsx scripts/render.ts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Upload Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: why-night-has-no-blue-video
+          path: why_night_has_no_blue.mp4
